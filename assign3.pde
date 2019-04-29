@@ -1,15 +1,8 @@
 final int GAME_START = 0, GAME_RUN = 1, GAME_OVER = 2;
 int gameState = 0;
 
-int soil_W=80;
-int soil_H=80;
-int soilX=0;
-int soil0Y=160;
-int soil1Y=480;
-int soil2Y=800;
-int soil3Y=1120;
-int soil4Y=1440;
-int soil5Y=1760;
+int soilbaseY=160;
+int soilY,soilY1,soilY2,soilY3;
 
 final int GRASS_HEIGHT = 15;
 final int START_BUTTON_W = 144;
@@ -18,10 +11,23 @@ final int START_BUTTON_X = 248;
 final int START_BUTTON_Y = 360;
 
 PImage title, gameover, startNormal, startHovered, restartNormal, restartHovered;
-PImage bg, soil8x24,soil0,soil1,soil2,soil3,soil4,soil5,stone1,stone2;
+PImage bg, soil8x24,soil0,soil1,soil2,soil3,soil4,soil5,stone1,stone2,groundhogDown,groundhogIdle,groundhogLeft,groundhogRight,life;
+PImage [] soil = new PImage [6];
+
+//moving 
+boolean idle = true;
+boolean downPressed=false;
+boolean leftPressed=false;
+boolean rightPressed=false;
+
+int groundhogX,groundhogY;
+final int SPACING = 80;
+final int X_groundhog=320;
+final int Y_groundhog=80;
+int groundhogSpeed=80/16;
 
 // For debug function; DO NOT edit or remove this!
-int playerHealth = 0;
+int playerHealth = 2;
 float cameraOffsetY = 0;
 boolean debugMode = false;
 
@@ -43,6 +49,18 @@ void setup() {
   soil5 = loadImage("img/soil5.png");
   stone1 = loadImage("img/stone1.png");
   stone2 = loadImage("img/stone2.png");
+  life = loadImage("img/life.png");
+  groundhogDown = loadImage("img/groundhogDown.png");
+  groundhogIdle = loadImage("img/groundhogIdle.png");
+  groundhogLeft = loadImage("img/groundhogLeft.png");
+  groundhogRight = loadImage("img/groundhogRight.png");
+ //soil
+  for(int i=0; i<soil.length;i++){
+    soil[i]=loadImage("img/soil"+i+".png");
+}
+//groundhog
+  groundhogX = X_groundhog;
+  groundhogY =Y_groundhog;
 }
 
 void draw() {
@@ -99,89 +117,167 @@ void draw() {
     rect(0, 160 - GRASS_HEIGHT, width, GRASS_HEIGHT);
 
     // Soil - REPLACE THIS PART WITH YOUR LOOP CODE!
-    for (int soilX=0; soilX<8;soilX++){
-    for (int Y=0; Y<4;Y++){
-    image(soil0,soil_W*soilX,soil0Y+soil_H*Y);
-  }
-  }
+    for(int x=0; x<8; x++){
+      for(int y=0; y<24;y++){
+        soilY = soilbaseY+y*80;
+        if(y<4){
+          image(soil[0], x*80, soilY);
+        }
+        if(y>=4 && y<8){
+          image(soil[1],x*80, soilY);
+        }
+        if(y>=8 && y<12){
+          image(soil[2],x*80, soilY);
+        }
+        if(y>=12 && y<16){
+          image(soil[3],x*80, soilY);
+        }
+        if(y>=16 && y<20){
+          image(soil[4],x*80, soilY);
+        }
+        if(y>=20 && y<24){
+          image(soil[5],x*80, soilY);
+        }
+      }
+    }
+    
+    // Stone1
+    for(int i=0; i<8; i++){
+      soilY1 = soilbaseY+i*SPACING;
+      image(stone1, i*SPACING, soilY1);
+    }
+    
+    // Stone2
+    for(int soilY2=soilbaseY+640; soilY2<soilbaseY+1280; soilY2+=SPACING){
+      for(int x=0; x<=width; x+=320){
+        if((soilY2-soilbaseY+640)%(SPACING*4) == 0) {
+          image(stone1, x+80, soilY2);
+          image(stone1,x+160,soilY2);
+        }
+        else if((soilY2-(soilbaseY+640))/SPACING == 3 || (soilY2-(soilbaseY+640))/SPACING == 7){
+          image(stone1, x+80, soilY2);
+          image(stone1,x+160,soilY2);
+        }
+        else{
+          image(stone1, x-80, soilY2);
+          image(stone1,x,soilY2);
+        }
+      }
+    }
 
-    for (int soilX=0; soilX<8;soilX++){
-    for (int Y=0; Y<4;Y++){
-    image(soil1,soil_W*soilX,soil1Y+soil_H*Y);
-  }
-  }
+    // Stone3
+    for(int soilY3=soilbaseY+1280; soilY3<soilbaseY+1920; soilY3+=SPACING){
+      for(int x=0; x<=width; x+=240){
+        if((soilY3-(soilbaseY+1280))%(SPACING*3) == 0) {
+          image(stone1, x+80, soilY3);
+          image(stone1,x+SPACING+80,soilY3);
+        }
+        else if((soilY3-(soilbaseY+1280))/SPACING == 1 || (soilY3-(soilbaseY+1280))/SPACING == 4 || (soilY3-(soilbaseY+1280))/SPACING == 7){
+          image(stone1, x, soilY3);
+          image(stone1,x+SPACING,soilY3);
+        }
+        else{
+          image(stone1, x-80, soilY3);
+          image(stone1,x,soilY3);
+        }
+      }
+    }
+    
+    for(int y3=soilbaseY+1280; y3<soilbaseY+1920; y3+=SPACING){
+      for(int x=0; x<=width; x+=240){
+        if((y3-(soilbaseY+1280))%(SPACING*3) == 0) {
+          image(stone2, x+SPACING+80, y3);
+        }
+        else if((y3-(soilbaseY+1280))/SPACING == 1 ||(y3-(soilbaseY+1280))/SPACING == 4||(y3-(soilbaseY+1280))/SPACING == 7){
+          image(stone2, x+SPACING, y3);
+        }
+        else{
+          image(stone2, x, y3);
+        }
+      }
+    }
 
     
-    for (int soilX=0; soilX<8;soilX++){
-    for (int Y=0; Y<4;Y++){
-    image(soil4,soil_W*soilX,soil4Y+soil_H*Y);
-  }
-  }
-    for (int soilX=0; soilX<8;soilX++){
-    for (int Y=0; Y<4;Y++){   
-    image(soil5,soil_W*soilX,soil5Y+soil_H*Y);
-  }
-  }
-    //stone17-24
-     for (int stoneI=0; stoneI<8;stoneI++){
-   image(stone1,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1+soil_H*7);
-   image(stone2,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1+soil_H*7);
-  image(stone1,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1+soil_H*6);
-   image(stone1,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1+soil_H*4);
-    image(stone2,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1+soil_H*4);
-   image(stone1,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1+soil_H*3);
-   image(stone1,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1+soil_H);
-   image(stone2,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1+soil_H);
-   image(stone1,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1); 
-   image(stone1,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1-soil_H*2);
-    image(stone2,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1-soil_H*2);
-   image(stone1,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1-soil_H*3);
-    image(stone1,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1-soil_H*5);
-   image(stone2,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1-soil_H*5);
-   image(stone1,soil_W*stoneI,soil5Y+soil_H*3+soil_H*stoneI*-1-soil_H*6);
-     }
-    //stone1-8
-    for (int stoneI=0; stoneI<8;stoneI++){
-      image(stone1,soil_W*stoneI,soil0Y+soil_H*stoneI);
-    }
-    //soil23
-    for (int soilX=0; soilX<8;soilX++){
-    for (int Y=0; Y<4;Y++){
-    image(soil2,soil_W*soilX,soil2Y+soil_H*Y);
-  }
-  }
-    for (int soilX=0; soilX<8;soilX++){
-    for (int Y=0; Y<4;Y++){
-    image(soil3,soil_W*soilX,soil3Y+soil_H*Y);
-  }
-  }
-     //stone9-16
-    for (int stoneI=0; stoneI<3;stoneI++){
-      image(stone1,soil_W*(1+4*stoneI),soil2Y);//line1
-      image(stone1,soil_W*(2+4*stoneI),soil2Y);
-      image(stone1,soil_W*(1+4*stoneI),soil2Y+3*soil_H);//line4
-      image(stone1,soil_W*(2+4*stoneI),soil2Y+3*soil_H);
-      image(stone1,soil_W*(1+4*stoneI),soil3Y);//line5
-      image(stone1,soil_W*(2+4*stoneI),soil3Y);
-      image(stone1,soil_W*(1+4*stoneI),soil3Y+3*soil_H);//line9
-      image(stone1,soil_W*(2+4*stoneI),soil3Y+3*soil_H);
-      image(stone1,soil_W*(4*stoneI-1),soil2Y+soil_H);//line2
-      image(stone1,soil_W*(4*stoneI),soil2Y+soil_H);
-      image(stone1,soil_W*(4*stoneI-1),soil2Y+2*soil_H);//line3
-      image(stone1,soil_W*(4*stoneI),soil2Y+2*soil_H);
-      image(stone1,soil_W*(4*stoneI-1),soil2Y+5*soil_H);//line6
-      image(stone1,soil_W*(4*stoneI),soil2Y+5*soil_H);
-      image(stone1,soil_W*(4*stoneI-1),soil2Y+6*soil_H);//line7
-      image(stone1,soil_W*(4*stoneI),soil2Y+6*soil_H);
-    }
-   
-    
-      
     // Player
+    if(idle){
+      image(groundhogIdle,groundhogX,groundhogY);
+    }
+    
+    if(downPressed){
+      idle = false;
+      leftPressed = false;
+      rightPressed = false;
+      image(groundhogDown,groundhogX,groundhogY);
+      if(groundhogY < soilbaseY+1520){
+       soilbaseY -= groundhogSpeed;
+        if(soilbaseY%80 == 0){
+        downPressed = false;
+        idle = true;
+        }
+      }
+      else{
+        groundhogY += groundhogSpeed;
+        if(groundhogY%80 == 0){
+        downPressed = false;
+        idle = true;
+        }
+      } 
+    }
+    
+    if(leftPressed){
+      idle = false;
+      downPressed = false;
+      rightPressed = false;
+      image(groundhogLeft,groundhogX,groundhogY);
+      groundhogX -= groundhogSpeed;
+      if(groundhogX%80 == 0){
+        leftPressed = false;
+        idle = true;
+      }
+    }
+    
+    if(rightPressed){
+      idle = false;
+      leftPressed = false;
+      downPressed = false;
+      image(groundhogRight,groundhogX,groundhogY);
+      groundhogX += groundhogSpeed;
+      if(groundhogX%80 == 0){
+        rightPressed = false;
+        idle = true;
+      }
+    }
+    
+    // Player boundary detection
+    if(groundhogX<0){
+      leftPressed = false;
+      idle = true;
+      groundhogX = 0;
+    }
+    if(groundhogX>width-SPACING){
+      rightPressed = false;
+      idle = true;
+      groundhogX = width-SPACING;
+    }
+    if(groundhogY>height-SPACING){
+      downPressed = false;
+      idle = true;
+      groundhogY = height-SPACING;
+    }
 
+    
     // Health UI
+    for(int i=0; i<playerHealth; i++){
+      image(life,10+i*70, 10);
+    }
+    if(playerHealth == 0){
+      gameState = GAME_OVER;
+    }
+    
 
     break;
+
+
 
     case GAME_OVER: // Gameover Screen
     image(gameover, 0, 0);
@@ -196,6 +292,11 @@ void draw() {
         gameState = GAME_RUN;
         mousePressed = false;
         // Remember to initialize the game here!
+        groundhogX = X_groundhog;
+        groundhogY = Y_groundhog;
+        playerHealth = 2;
+        soilbaseY = 160;
+
       }
     }else{
 
@@ -214,17 +315,31 @@ void draw() {
 
 void keyPressed(){
   // Add your moving input code here
-
+if(key == CODED){
+   switch(keyCode){
+    case DOWN:
+          downPressed = true;
+          break;
+        case LEFT:
+          leftPressed = true;
+          break;
+        case RIGHT:
+          rightPressed = true;
+          break;
+      }
+    }
   // DO NOT REMOVE OR EDIT THE FOLLOWING SWITCH/CASES
+  
+
     switch(key){
       case 'w':
       debugMode = true;
-      cameraOffsetY += 25;
+      cameraOffsetY += 80;
       break;
 
       case 's':
       debugMode = true;
-      cameraOffsetY -= 25;
+      cameraOffsetY -= 80;
       break;
 
       case 'a':
